@@ -1,9 +1,12 @@
 const express = require("express");
+const logger = require("./middlewares/logger");
 const restaurantesRoutes = require("./routes/restaurantes");
+
 
 const app = express();
 
 app.use(express.json());
+app.use(logger);
 
 app.get("/api/salud", (req, res) => {
   res.status(200).json({ estado: "ok" });
