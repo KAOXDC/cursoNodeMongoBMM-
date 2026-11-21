@@ -1,48 +1,45 @@
-// src/models/restaurante.js
-// Datos en memoria. En la sesión 11 se reemplaza por Mongoose y MongoDB.
-const restaurantes = [
-  { id: 1, nombre: "La Esquina del Ajiaco", ciudad: "Bogotá" }, // i = 0
-  { id: 2, nombre: "Pizza Nonna", ciudad: "Medellín" }, // i = 1
-  { id: 3, nombre: "Verde Vivo", ciudad: "Cali" } // i = 2
-];
+// src/models/restaurante.model.js
+const mongoose = require("mongoose");
 
-let siguienteId = 4;
+const restauranteSchema = new mongoose.Schema(
+  {
+    nombre: {
+      type: String,
+      required: [true, "El nombre es obligatorio"],
+      trim: true,
+      minlength: [2, "El nombre debe tener al menos 2 caracteres"]
+    },
+    ciudad: {
+      type: String,
+      required: [true, "La ciudad es obligatoria"],
+      trim: true
+    },
+    categorias: {
+      type: [String],
+      default: []
+    },
+    calificacion: {
+      type: Number,
+      min: [0, "La calificación mínima es 0"],
+      max: [5, "La calificación máxima es 5"],
+      default: 0
+    },
+    abierto: {
+      type: Boolean,
+      default: true
+    }
+  },
+  { timestamps: true }
+);
 
-const listar = (ciudad) => {
-  if (!ciudad) return restaurantes;
-  return restaurantes.filter(
-    (r) => r.ciudad.toLowerCase() === ciudad.toLowerCase()
-  );
-};
+// En las respuestas JSON: mostrar "id" en lugar de "_id" y ocultar "__v"
+restauranteSchema.set("toJSON", {
+  transform: (doc, ret) => {
+    ret.id = ret._id.toString();
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
+});
 
-const obtenerPorId = (id) => restaurantes.find((r) => r.id === id);
-
-const crear = ({ nombre, ciudad }) => {
-  const nuevo = { id: siguienteId++, nombre, ciudad };
-  restaurantes.push(nuevo);
-  return nuevo;
-};
-
-const reemplazar = (id, { nombre, ciudad }) => {
-  const indice = restaurantes.findIndex((r) => r.id === id);
-  if (indice === -1) return undefined;
-  restaurantes[indice] = { id, nombre, ciudad };
-  return restaurantes[indice];
-};
-
-const actualizar = (id, { nombre, ciudad }) => {
-  const restaurante = obtenerPorId(id);
-  if (!restaurante) return undefined;
-  if (nombre !== undefined) restaurante.nombre = nombre;
-  if (ciudad !== undefined) restaurante.ciudad = ciudad;
-  return restaurante;
-};
-
-const eliminar = (id) => {
-  const indice = restaurantes.findIndex((r) => r.id === id);
-  if (indice === -1) return false;
-  restaurantes.splice(indice, 1);
-  return true;
-};
-
-module.exports = { listar, obtenerPorId, crear, reemplazar, actualizar, eliminar };
+module.exports = mongoose.model("Restaurante", restauranteSchema);

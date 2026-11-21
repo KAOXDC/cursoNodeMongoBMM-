@@ -1,105 +1,156 @@
-// src/controllers/restaurantes.js
+// src/controllers/restaurantes.controller.js
+const mongoose = require("mongoose");
 const Restaurante = require("../models/restaurantes");
 
-const obtenerTodos = (req, res) => {
+// Lista blanca: solo estos campos se aceptan desde el body
+const CAMPOS_EDITABLES = ["nombre", "ciudad", "categorias", "calificacion", "abierto"];
+
+const seleccionarCampos = (body = {}) =>
+  Object.fromEntries(
+    Object.entries(body).filter(([clave]) => CAMPOS_EDITABLES.includes(clave))
+  );
+
+const idValido = (id) => mongoose.isValidObjectId(id);
+
+const manejarError = (error, res) => {
+  if (error.name === "ValidationError") {
+    const errores = Object.values(error.errors).map((e) => e.message);
+    return res.status(400).json({ mensaje: "Datos inválidos", errores });
+  }
+
+  if (error.name === "CastError") {
+    return res.status(400).json({ mensaje: "Algún valor enviado tiene un tipo inválido" });
+  }
+
+  console.error(error);
+  res.status(500).json({ mensaje: "Error interno del servidor" });
+};
+
+// Localhost:3500/api/restaurantes?ciudad=cali
+const obtenerTodos = async (req, res) => {
   try {
     const { ciudad } = req.query;
-    const restaurantes = Restaurante.listar(ciudad); // []  ==> todo es texto
-    res.status(200).json(restaurantes); // texto  >> json
+    const filtro = ciudad ? { ciudad } : {};
+    const restaurantes = await Restaurante.find(filtro).collation({ locale: "es", strength: 2 });
+    res.status(200).json(restaurantes);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ mensaje: "Error interno del servidor" });
+    manejarError(error, res);
   }
 };
 
-const obtenerPorId = (req, res) => {
-  const id = Number(req.params.id);
+// // Localhost:3500/api/restaurantes/
+// const obtenerTodos = async (req, res) => {
+//   try {
+//     const restaurantes = await Restaurante.find(filtro).collation({ locale: "es", strength: 2 });
+//     res.status(200).json(restaurantes);
+//   } catch (error) {
+//     manejarError(error, res);
+//   }
+// };
 
-  if (Number.isNaN(id)) {
-    return res.status(400).json({ mensaje: "El id debe ser un número" });
+const obtenerPorId = async (req, res) => {
+  const { id } = req.params;
+
+  if (!idValido(id)) {
+    return res.status(400).json({ mensaje: "El id no es válido" });
   }
 
-  const restaurante = Restaurante.obtenerPorId(id);
+  try {
+    const restaurante = await Restaurante.findById(id);
 
-  if (!restaurante) {
-    return res.status(404).json({ mensaje: "Restaurante no encontrado" });
+    if (!restaurante) {
+      return res.status(404).json({ mensaje: "Restaurante no encontrado" });
+    }
+
+    res.status(200).json(restaurante);
+  } catch (error) {
+    manejarError(error, res);
   }
-
-  res.status(200).json(restaurante);
 };
 
-// {  "nombre": "Carantana", "ciudad": "Popayán" }
-const crear = (req, res) => {
-  const { nombre, ciudad } = req.body ?? {};
-
-  if (!nombre || !ciudad) {
-    return res.status(400).json({ mensaje: "nombre y ciudad son obligatorios" });
+// Crear un restaurante 
+const crear = async (req, res) => {
+  try {
+    const nuevo = await Restaurante.create(seleccionarCampos(req.body)); // db.restaurante.insertOne({})
+    res.status(201).json(nuevo);
+  } catch (error) {
+    manejarError(error, res);
   }
-
-  const nuevo = Restaurante.crear({ nombre, ciudad });
-  res.status(201).json(nuevo);
 };
 
+const reemplazar = async (req, res) => {
+  const { id } = req.params;
 
-// src/controllers/restaurantes.js (continuación)
-// {  "nombre": "Carantanta", "ciudad": "Popayán" }
-const reemplazar = (req, res) => {
-  const id = Number(req.params.id);
-  const { nombre, ciudad } = req.body ?? {};
-
-  if (Number.isNaN(id)) {
-    return res.status(400).json({ mensaje: "El id debe ser un número" });
+  if (!idValido(id)) {
+    return res.status(400).json({ mensaje: "El id no es válido" });
   }
 
-  if (!nombre || !ciudad) {
-    return res.status(400).json({ mensaje: "PUT requiere nombre y ciudad" });
+  try {
+    const restaurante = await Restaurante.findById(id);
+
+    if (!restaurante) {
+      return res.status(404).json({ mensaje: "Restaurante no encontrado" });
+    }
+
+    const { nombre, ciudad, categorias = [], calificacion = 0, abierto = true } = req.body ?? {};
+    restaurante.set({ nombre, ciudad, categorias, calificacion, abierto });
+    await restaurante.save();
+
+    // no crea un registro nuevo  con la misma instacia del restaurante con el mismo ID
+    // guardar el cambio del objeto en la BD ---> Documento
+
+    res.status(200).json(restaurante);
+  } catch (error) {
+    manejarError(error, res);
   }
-
-  const actualizado = Restaurante.reemplazar(id, { nombre, ciudad });
-
-  if (!actualizado) {
-    return res.status(404).json({ mensaje: "Restaurante no encontrado" });
-  }
-
-  res.status(200).json(actualizado);
 };
 
-// {  "nombre": "Carantana Restaurante"}
-const actualizar = (req, res) => {
-  const id = Number(req.params.id);
-  const { nombre, ciudad } = req.body ?? {};
+const actualizar = async (req, res) => {
+  const { id } = req.params;
+  const cambios = seleccionarCampos(req.body);
 
-  if (Number.isNaN(id)) {
-    return res.status(400).json({ mensaje: "El id debe ser un número" });
+  if (!idValido(id)) {
+    return res.status(400).json({ mensaje: "El id no es válido" });
   }
 
-  if (nombre === undefined && ciudad === undefined) {
+  if (Object.keys(cambios).length === 0) {
     return res.status(400).json({ mensaje: "Envía al menos un campo para actualizar" });
   }
 
-  const actualizado = Restaurante.actualizar(id, { nombre, ciudad });
+  try {
+    const actualizado = await Restaurante.findByIdAndUpdate(id, cambios, {
+      returnDocument: "after",
+      runValidators: true
+    });
 
-  if (!actualizado) {
-    return res.status(404).json({ mensaje: "Restaurante no encontrado" });
+    if (!actualizado) {
+      return res.status(404).json({ mensaje: "Restaurante no encontrado" });
+    }
+
+    res.status(200).json(actualizado);
+  } catch (error) {
+    manejarError(error, res);
   }
-
-  res.status(200).json(actualizado);
 };
 
-const eliminar = (req, res) => {
-  const id = Number(req.params.id);
+const eliminar = async (req, res) => {
+  const { id } = req.params;
 
-  if (Number.isNaN(id)) {
-    return res.status(400).json({ mensaje: "El id debe ser un número" });
+  if (!idValido(id)) {
+    return res.status(400).json({ mensaje: "El id no es válido" });
   }
 
-  const eliminado = Restaurante.eliminar(id);
+  try {
+    const eliminado = await Restaurante.findByIdAndDelete(id);
 
-  if (!eliminado) {
-    return res.status(404).json({ mensaje: "Restaurante no encontrado" });
+    if (!eliminado) {
+      return res.status(404).json({ mensaje: "Restaurante no encontrado" });
+    }
+
+    res.status(200).json({ mensaje: "Restaurante eliminado" });
+  } catch (error) {
+    manejarError(error, res);
   }
-
-  res.status(200).json({ mensaje: "Restaurante eliminado" });
 };
 
 module.exports = { obtenerTodos, obtenerPorId, crear, reemplazar, actualizar, eliminar };

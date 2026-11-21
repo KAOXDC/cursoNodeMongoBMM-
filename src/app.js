@@ -9,7 +9,6 @@ app.get("/api/salud", (req, res) => {
   res.status(200).json({ estado: "ok" });
 });
 
-// Rutas del modulo de Restaurantes
 app.use("/api/restaurantes", restaurantesRoutes);
 
 app.use((req, res) => {
