@@ -2,10 +2,10 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const { z } = require("zod");
-const Restaurante = require("../src/models/restaurante.model");
-const validar = require("../src/middlewares/validar.middleware");
-const notFound = require("../src/middlewares/notFound.middleware");
-const errorHandler = require("../src/middlewares/error.middleware");
+const Restaurante = require("../src/models/restaurante");
+const validar = require("../src/middlewares/validar");
+const notFound = require("../src/middlewares/notFound");
+const errorHandler = require("../src/middlewares/error");
 const AppError = require("../src/utils/AppError");
 const {
   crearRestauranteSchema,

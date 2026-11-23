@@ -1,6 +1,6 @@
 // lab/seed.js: deja la base del laboratorio con 3 restaurantes
 const mongoose = require("mongoose");
-const Restaurante = require("../src/models/restaurante.model");
+const Restaurante = require("../src/models/restaurantes");
 
 const URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/curso_lab";
 

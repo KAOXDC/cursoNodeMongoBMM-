@@ -1,7 +1,7 @@
 // lab/fragil.js: API FRÁGIL, solo para el laboratorio. Nunca la publiques en internet.
 const express = require("express");
 const mongoose = require("mongoose");
-const Restaurante = require("../src/models/restaurante.model");
+const Restaurante = require("../src/models/restaurantes");
 
 const PORT = process.env.PORT || 4000;
 const URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/curso_lab";
