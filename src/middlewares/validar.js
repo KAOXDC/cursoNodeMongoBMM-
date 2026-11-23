@@ -1,3 +1,7 @@
+// src/middlewares/validar.middleware.js
+const AppError = require("../utils/AppError");
+
+// Fábrica de middlewares: valida req[origen] ("body", "params" o "query") con un esquema de Zod
 const validar = (origen, schema) => (req, res, next) => {
   const resultado = schema.safeParse(req[origen] ?? {});
 
@@ -7,10 +11,10 @@ const validar = (origen, schema) => (req, res, next) => {
       mensaje: problema.message
     }));
 
-    return res.status(400).json({ mensaje: "Datos inválidos", errores });
+    // Ya no respondemos aquí: el middleware global de errores da la respuesta
+    return next(new AppError("Datos inválidos", 400, errores));
   }
 
-  // Guardamos los datos ya validados y limpios
   req.validado = { ...req.validado, [origen]: resultado.data };
   next();
 };
