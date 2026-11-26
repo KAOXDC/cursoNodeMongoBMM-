@@ -1,14 +1,14 @@
 // src/config/db.js
 const mongoose = require("mongoose");
+const env = require("./env");
+const logger = require("../utils/logger");
 
 const conectarDB = async () => {
-  const uri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/curso_express";
-
   try {
-    await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
-    console.log("Conectado a MongoDB");
+    await mongoose.connect(env.MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
+    logger.info("Conectado a MongoDB");
   } catch (error) {
-    console.error("Error al conectar con MongoDB:", error.message);
+    logger.error("No se pudo conectar con MongoDB", { mensajeError: error.message });
     process.exit(1);
   }
 };

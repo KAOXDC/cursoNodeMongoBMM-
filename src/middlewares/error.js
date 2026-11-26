@@ -1,5 +1,6 @@
 // src/middlewares/error.middleware.js
 const AppError = require("../utils/AppError");
+const logger = require("../utils/logger");
 
 // Convierte los errores conocidos (de Express, Mongoose o nuestros) en un AppError.
 // Devuelve null si el error no se reconoce: es un fallo inesperado.
@@ -44,7 +45,7 @@ const errorHandler = (err, req, res, next) => {
 
   if (!conocido) {
     // Fallo inesperado: el detalle va al log del servidor, nunca al cliente
-    console.error(err);
+    logger.error("Error inesperado", { ruta: `${req.method} ${req.originalUrl}`, ...logger.detalle(err) });
     return res.status(500).json({ mensaje: "Error interno del servidor" });
   }
 
